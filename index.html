@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東華三院高可寧紀念小學 數學科 擬題紀錄表</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (xlsx) for reading and writing Excel files -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+            @page { size: A4 portrait; margin: 12mm; }
+            .page-break { page-break-before: always; }
+            #print-report-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans pb-12">
+
+    <!-- Notification Toast / Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden no-print">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl border border-slate-100 transform transition-all scale-100">
+            <div class="flex items-center space-x-3 text-amber-600 mb-3">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h3 class="text-lg font-bold text-slate-900" id="alert-title">提示訊息</h3>
+            </div>
+            <p class="text-slate-600 text-sm mb-5 leading-relaxed" id="alert-message"></p>
+            <div class="flex justify-end">
+                <button onclick="closeAlert()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition shadow">
+                    確定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar / Header -->
+    <header class="bg-indigo-800 text-white shadow-lg no-print border-b border-indigo-900">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-400 text-indigo-950 p-2.5 rounded-xl shadow">
+                    <i class="fa-solid fa-calculator text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wide">東華三院高可寧紀念小學</h1>
+                    <p class="text-xs text-indigo-200 font-medium">數學科 擬題紀錄表管理系統</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-sm bg-indigo-900/80 py-2 px-4 rounded-xl border border-indigo-700 shadow-inner">
+                <i class="fa-solid fa-file-excel text-emerald-400 text-base"></i>
+                <span>總表資料檔：</span>
+                <span id="excel-status" class="font-semibold text-amber-300">已載入簡介示範資料</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 mt-6 space-y-6">
+
+        <!-- Excel Upload & Template Download Card -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 no-print">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-csv text-indigo-600"></i> 教學目標總表 Excel 檔案管理
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">
+                        欄位順序：<span class="font-semibold text-slate-700">年級 &rarr; 冊別 &rarr; 課次及課題 &rarr; 範疇 &rarr; 教學目標</span>。可下載標準範本填寫後匯入。
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button onclick="downloadTemplate()" class="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-300 text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 font-medium shadow-sm">
+                        <i class="fa-solid fa-download text-sky-600"></i> 下載 Excel 範本
+                    </button>
+                    <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 font-medium shadow-sm">
+                        <i class="fa-solid fa-file-circle-plus"></i> 匯入 Excel 檔案
+                        <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="hidden" onchange="handleExcelUpload(event)">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Assessment Basic Settings Card -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6 no-print">
+            <h2 class="text-lg font-bold text-indigo-900 border-b pb-3 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-indigo-600"></i> 試卷基本設定
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">學校名稱</label>
+                    <input type="text" id="school-name" value="東華三院高可寧紀念小學" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50/50 font-medium">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">年級</label>
+                    <select id="main-grade" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50/50 font-medium" onchange="autoSyncGradeSelector()">
+                        <option value="小一" selected>小一 (P1)</option>
+                        <option value="小二">小二 (P2)</option>
+                        <option value="小三">小三 (P3)</option>
+                        <option value="小四">小四 (P4)</option>
+                        <option value="小五">小五 (P5)</option>
+                        <option value="小六">小六 (P6)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">考試階段</label>
+                    <select id="exam-stage" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50/50 font-medium">
+                        <option value="學段一" selected>學段一</option>
+                        <option value="學段二">學段二</option>
+                        <option value="學段三">學段三</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 本次考核範圍選取 (年級 -> 冊別 -> 課次及課題) -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 no-print">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3">
+                <h2 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-600"></i> 本次考核範圍選取
+                </h2>
+                <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">依次序選擇：年級 &rarr; 冊別 &rarr; 課次及課題</span>
+            </div>
+
+            <!-- Cascading Scope Selectors -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">1. 年級</label>
+                    <select id="scope-select-grade" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="onScopeGradeChange()">
+                        <option value="">-- 請選擇 --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">2. 冊別</label>
+                    <select id="scope-select-book" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="onScopeBookChange()">
+                        <option value="">-- 請選擇 --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">3. 課次及課題 (例如：第1課 認識1至20)</label>
+                    <select id="scope-select-lesson-topic" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">-- 請選擇 --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="addScopeItem()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm font-medium">
+                    <i class="fa-solid fa-plus"></i> 加入考核範圍
+                </button>
+            </div>
+
+            <!-- Scope List Display Table -->
+            <div class="mt-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-folder-open text-indigo-500"></i> 已選考核範圍列表：
+                    </h3>
+                    <button onclick="sortScopeByExcel()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-medium shadow-sm">
+                        <i class="fa-solid fa-arrow-down-short-wide text-amber-600"></i> 依 Excel 順序排列
+                    </button>
+                </div>
+
+                <div class="border rounded-xl overflow-hidden border-slate-200 shadow-sm bg-white">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 w-12 text-center">#</th>
+                                <th class="p-3 w-24">年級</th>
+                                <th class="p-3 w-24">冊別</th>
+                                <th class="p-3">課次及課題</th>
+                                <th class="p-3 w-20 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scope-table-body" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-400">尚未加入考核範圍項目</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 教學目標及題目分佈設定 -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 no-print">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3">
+                <h2 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-indigo-600"></i> 教學目標及題目分佈設定
+                </h2>
+                <span class="text-xs text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full font-medium">選擇教學目標，系統自動對應範疇並計算比重</span>
+            </div>
+
+            <!-- Objective Selector Inputs Block -->
+            <div class="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">1. 年級</label>
+                        <select id="obj-select-grade" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="onObjGradeChange()">
+                            <option value="">-- 請選擇 --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">2. 冊別</label>
+                        <select id="obj-select-book" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="onObjBookChange()">
+                            <option value="">-- 請選擇 --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">3. 課次及課題 (例如：第1課 認識1至20)</label>
+                        <select id="obj-select-lesson-topic" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="onObjLessonTopicChange()">
+                            <option value="">-- 請選擇 --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">4. 對應教學目標</label>
+                    <select id="obj-select-target" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">-- 請先選擇課次及課題 --</option>
+                    </select>
+                </div>
+
+                <!-- Input row: Cleaned single row for QNum, QType, Difficulty, Score -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">題號 <span class="text-rose-500">*</span> (例: 1, 2a, 3)</label>
+                        <input type="text" id="obj-input-qnum" placeholder="例如: 1a" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">題型</label>
+                        <select id="obj-input-type" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="選擇題">選擇題</option>
+                            <option value="填空題" selected>填空題</option>
+                            <option value="計算題">計算題</option>
+                            <option value="應用題">應用題</option>
+                            <option value="列式計算">列式計算</option>
+                            <option value="作圖題">作圖題</option>
+                            <option value="統計圖">統計圖</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">難度</label>
+                        <select id="obj-input-difficulty" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="高">高</option>
+                            <option value="中" selected>中</option>
+                            <option value="低">低</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">佔分</label>
+                        <input type="number" id="obj-input-score" value="2" min="1" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-1">
+                    <button onclick="addObjectiveItem()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm font-medium">
+                        <i class="fa-solid fa-plus"></i> 新增至題目目標分佈表
+                    </button>
+                </div>
+            </div>
+
+            <!-- Objectives Table with Statistics Footer -->
+            <div class="mt-4 space-y-2">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-ol text-indigo-500"></i> 題目目標分佈列表：
+                    </h3>
+                    <button onclick="sortObjectivesByQNum()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-medium shadow-sm">
+                        <i class="fa-solid fa-sort-numeric-down text-amber-600"></i> 依題號排列
+                    </button>
+                </div>
+
+                <div class="border rounded-xl overflow-hidden border-slate-200 shadow-sm bg-white">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 w-16 text-center">題號</th>
+                                <th class="p-3 w-20">題型</th>
+                                <th class="p-3">課題內容 (冊別 / 課次及課題)</th>
+                                <th class="p-3">對應教學目標</th>
+                                <th class="p-3 w-24 text-center">範疇</th>
+                                <th class="p-3 w-16 text-center">難度</th>
+                                <th class="p-3 w-16 text-center">佔分</th>
+                                <th class="p-3 w-24 text-center">屬性</th>
+                                <th class="p-3 w-16 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="obj-table-body" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="9" class="p-4 text-center text-slate-400">尚未新增教學目標及題目安排</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="obj-table-foot" class="bg-slate-50 border-t border-slate-200 divide-y divide-slate-200">
+                            <!-- Populated dynamically by renderObjectiveTable() -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export & Print Action Buttons Row -->
+        <div class="flex flex-wrap justify-end gap-3 no-print pt-2">
+            <button onclick="exportToWord()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-xl font-bold shadow-md transition flex items-center gap-2 text-base">
+                <i class="fa-solid fa-file-word"></i> 匯出 Word 檔 (.doc)
+            </button>
+            <button onclick="generateAndPrintReport()" class="bg-indigo-900 hover:bg-indigo-950 text-white px-6 py-3 rounded-xl font-bold shadow-md transition flex items-center gap-2 text-base">
+                <i class="fa-solid fa-print"></i> 列印 / 預覽試卷分析表
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Printable Analysis Report Container -->
+    <div id="print-report-container" class="max-w-5xl mx-auto bg-white p-8 mt-6 rounded-xl border border-slate-300 shadow-md print-only">
+        <!-- Print Header -->
+        <div class="text-center border-b-2 border-slate-800 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-900 tracking-wide" id="print-header-school">東華三院高可寧紀念小學</h1>
+            <h2 class="text-xl font-semibold text-slate-800 mt-1">數學科 擬題紀錄表</h2>
+            <div class="flex justify-center gap-8 text-sm font-medium text-slate-600 mt-3">
+                <span>年級：<span id="print-grade" class="font-bold text-slate-900"></span></span>
+                <span>考試階段：<span id="print-exam-stage" class="font-bold text-slate-900"></span></span>
+                <span>總分：<span id="print-total-score" class="font-bold text-slate-900"></span> 分</span>
+                <span>總題數：<span id="print-total-questions" class="font-bold text-slate-900"></span> 題</span>
+            </div>
+        </div>
+
+        <!-- Section 1: 本次考核範圍 -->
+        <div class="mb-6">
+            <h3 class="text-base font-bold text-slate-900 mb-2 border-l-4 border-indigo-700 pl-2">一、 本次考核範圍</h3>
+            <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-800 border-b border-slate-300 font-bold">
+                        <th class="border border-slate-300 p-2 w-12 text-center">#</th>
+                        <th class="border border-slate-300 p-2 w-20">年級</th>
+                        <th class="border border-slate-300 p-2 w-20">冊別</th>
+                        <th class="border border-slate-300 p-2">課次及課題</th>
+                    </tr>
+                </thead>
+                <tbody id="print-scope-tbody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section 2: 題目與教學目標分佈 -->
+        <div class="mb-6">
+            <h3 class="text-base font-bold text-slate-900 mb-2 border-l-4 border-indigo-700 pl-2">二、 題目與教學目標分佈</h3>
+            <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-800 border-b border-slate-300 font-bold">
+                        <th class="border border-slate-300 p-2 w-12 text-center">題號</th>
+                        <th class="border border-slate-300 p-2 w-16">題型</th>
+                        <th class="border border-slate-300 p-2">課題內容</th>
+                        <th class="border border-slate-300 p-2">對應教學目標</th>
+                        <th class="border border-slate-300 p-2 w-20 text-center">範疇</th>
+                        <th class="border border-slate-300 p-2 w-12 text-center">難度</th>
+                        <th class="border border-slate-300 p-2 w-12 text-center">佔分</th>
+                        <th class="border border-slate-300 p-2 w-20 text-center">備註</th>
+                    </tr>
+                </thead>
+                <tbody id="print-obj-tbody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Section 3: 統計分析 (難度, 範疇, 屬性) -->
+        <div class="mb-6">
+            <h3 class="text-base font-bold text-slate-900 mb-2 border-l-4 border-indigo-700 pl-2">三、 試卷難度、範疇與屬性統計</h3>
+            <div class="grid grid-cols-3 gap-4 text-xs border border-slate-300 p-3 rounded">
+                <div>
+                    <p class="font-bold mb-1.5 text-slate-800 border-b pb-1">【難度比重】</p>
+                    <ul id="print-difficulty-summary" class="space-y-1 text-slate-700">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-bold mb-1.5 text-slate-800 border-b pb-1">【範疇比重】</p>
+                    <ul id="print-category-summary" class="space-y-1 text-slate-700">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-bold mb-1.5 text-slate-800 border-b pb-1">【範圍屬性】</p>
+                    <ul id="print-knowledge-summary" class="space-y-1 text-slate-700">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signatures -->
+        <div class="mt-12 pt-4 flex justify-between text-xs text-slate-700 font-medium">
+            <div>擬題教師簽署：______________________</div>
+            <div>科 Panel 簽署：______________________</div>
+            <div>日期：______________________</div>
+        </div>
+    </div>
+
+    <script>
+        // Initial Dataset populated with rich curriculum data for presentation
+        let rawData = [
+            // P1
+            { "年級": "小一", "冊別": "1上", "lessonTopic": "第1課 5以內的數", "範疇": "數", "教學目標": "順數及倒數5以內的數" },
+            { "年級": "小一", "冊別": "1上", "lessonTopic": "第1課 5以內的數", "範疇": "數", "教學目標": "認識5以內的基數與序數" },
+            { "年級": "小一", "冊別": "1上", "lessonTopic": "第2課 10以內的數", "範疇": "數", "教學目標": "進行10以內的數數與比較" },
+            { "年級": "小一", "冊別": "1上", "lessonTopic": "第3課 立體圖形(一)", "範疇": "圖形與空間", "教學目標": "辨認常見的立體圖形" },
+            { "年級": "小一", "冊別": "1下", "lessonTopic": "第1課 100以內的數", "範疇": "數", "教學目標": "認識100以內的數及位值" },
+            // P2
+            { "年級": "小二", "冊別": "2上", "lessonTopic": "第1課 三位數", "範疇": "數", "教學目標": "認識百位的位值與數的大小比較" },
+            { "年級": "小二", "冊別": "2上", "lessonTopic": "第2課 厘米和米", "範疇": "度量", "教學目標": "以自訂單位及厘米量度長度" },
+            // P3
+            { "年級": "小三", "冊別": "3上", "lessonTopic": "第1課 象形圖", "範疇": "數據處理", "教學目標": "閱讀及製作象形圖" },
+            // P5 & P6
+            { "年級": "小五", "冊別": "5下", "lessonTopic": "第1課 簡易方程", "範疇": "代數", "教學目標": "理解方程概念及解簡易方程" },
+            { "年級": "小六", "冊別": "6上", "lessonTopic": "第1課 折扣", "範疇": "數", "教學目標": "計算折扣及售價" }
+        ];
+
+        // Preset Scope List for demonstration
+        let selectedScopeList = [
+            { grade: "小一", book: "1上", lessonTopic: "第1課 5以內的數" },
+            { grade: "小一", book: "1上", lessonTopic: "第2課 10以內的數" }
+        ];
+
+        // Preset Objective List for demonstration
+        let selectedObjectiveList = [
+            { qNum: "1", qType: "選擇題", grade: "小一", book: "1上", lessonTopic: "第1課 5以內的數", target: "順數及倒數5以內的數", category: "數", difficulty: "低", score: 2 },
+            { qNum: "2a", qType: "填空題", grade: "小一", book: "1上", lessonTopic: "第1課 5以內的數", target: "認識5以內的基數與序數", category: "數", difficulty: "中", score: 2 },
+            { qNum: "2b", qType: "填空題", grade: "小一", book: "1上", lessonTopic: "第2課 10以內的數", target: "進行10以內的數數與比較", category: "數", difficulty: "中", score: 2 },
+            { qNum: "3", qType: "作圖題", grade: "小一", book: "1上", lessonTopic: "第3課 立體圖形(一)", target: "辨認常見的立體圖形", category: "圖形與空間", difficulty: "中", score: 4 },
+            { qNum: "4", qType: "統計圖", grade: "小三", book: "3上", lessonTopic: "第1課 象形圖", target: "閱讀及製作象形圖", category: "數據處理", difficulty: "高", score: 5 },
+            { qNum: "5", qType: "應用題", grade: "小一", book: "1上", lessonTopic: "第2課 10以內的數", target: "進行10以內的數數與比較", category: "數", difficulty: "高", score: 5 }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropdowns();
+            renderScopeTable();
+            renderObjectiveTable();
+        });
+
+        function showAlert(msg, title = "提示訊息") {
+            document.getElementById('alert-title').textContent = title;
+            document.getElementById('alert-message').textContent = msg;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        // 1. 下載 Excel 範本
+        function downloadTemplate() {
+            const templateData = [
+                { "年級": "小一", "冊別": "1上", "課次及課題": "第1課 5以內的數", "範疇": "數", "教學目標": "順數及倒數5以內的數" },
+                { "年級": "小一", "冊別": "1上", "課次及課題": "第1課 5以內的數", "範疇": "數", "教學目標": "認識5以內的基數與序數" },
+                { "年級": "小一", "冊別": "1上", "課次及課題": "第2課 立體圖形(一)", "範疇": "圖形與空間", "教學目標": "辨認常見的立體圖形" },
+                { "年級": "小二", "冊別": "2上", "課次及課題": "第1課 厘米和米", "範疇": "度量", "教學目標": "以厘米為單位量度物件長度" },
+                { "年級": "小三", "冊別": "3上", "課次及課題": "第1課 象形圖", "範疇": "數據處理", "教學目標": "閱讀及解釋象形圖的數據" },
+                { "年級": "小五", "冊別": "5下", "課次及課題": "第1課 簡易方程", "範疇": "代數", "教學目標": "解一步計算的簡易方程" }
+            ];
+
+            const ws = XLSX.utils.json_to_sheet(templateData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "教學目標總表");
+            XLSX.writeFile(wb, "小學數學科教學目標範本.xlsx");
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (json.length > 0) {
+                        rawData = json.map(row => {
+                            const grade = String(row["年級"] || row["Grade"] || "").trim();
+                            const book = String(row["冊別"] || row["Book"] || "").trim();
+                            const target = String(row["教學目標"] || row["Objective"] || "").trim();
+                            
+                            const lesson = String(row["課次"] || row["Lesson"] || "").trim();
+                            const topic = String(row["課題"] || row["Topic"] || "").trim();
+                            let combinedLT = String(row["課次及課題"] || row["課次與課題"] || "").trim();
+
+                            if (!combinedLT) {
+                                combinedLT = [lesson, topic].filter(Boolean).join(" ");
+                            }
+
+                            let category = String(row["範疇"] || row["Category"] || row["Dimension"] || "").trim();
+                            if (!category) {
+                                const text = (combinedLT + " " + target).toLowerCase();
+                                if (text.includes("代數") || text.includes("方程")) category = "代數";
+                                else if (text.includes("圖") || text.includes("角") || text.includes("體") || text.includes("空間") || text.includes("方向")) category = "圖形與空間";
+                                else if (text.includes("度") || text.includes("厘米") || text.includes("米") || text.includes("克") || text.includes("升") || text.includes("時間") || text.includes("貨幣") || text.includes("面積") || text.includes("體積")) category = "度量";
+                                else if (text.includes("統計") || text.includes("象形圖") || text.includes("棒形圖") || text.includes("圖表") || text.includes("平均數")) category = "數據處理";
+                                else category = "數";
+                            }
+
+                            return {
+                                "年級": grade,
+                                "冊別": book,
+                                "lessonTopic": combinedLT,
+                                "範疇": category,
+                                "教學目標": target
+                            };
+                        }).filter(r => r["年級"] && r["lessonTopic"]);
+
+                        document.getElementById('excel-status').textContent = `已成功讀取 ${file.name} (${rawData.length} 條)`;
+                        initDropdowns();
+                        showAlert(`成功匯入 ${rawData.length} 條教學目標資料！`, "匯入成功");
+                    } else {
+                        showAlert('Excel 檔案內無資料或格式不符！');
+                    }
+                } catch (err) {
+                    showAlert('讀取 Excel 檔案時發生錯誤，請確認檔案格式是否正確。');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function autoSyncGradeSelector() {
+            const mainGrade = document.getElementById('main-grade').value;
+            const scopeGrade = document.getElementById('scope-select-grade');
+            const objGrade = document.getElementById('obj-select-grade');
+
+            if (scopeGrade) {
+                scopeGrade.value = mainGrade;
+                onScopeGradeChange();
+            }
+            if (objGrade) {
+                objGrade.value = mainGrade;
+                onObjGradeChange();
+            }
+        }
+
+        function initDropdowns() {
+            populateScopeGrades();
+            populateObjGrades();
+        }
+
+        function populateScopeGrades() {
+            const gradeSelect = document.getElementById('scope-select-grade');
+            const grades = [...new Set(rawData.map(r => r["年級"]))].filter(Boolean);
+            
+            gradeSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                grades.map(g => `<option value="${g}">${g}</option>`).join('');
+
+            const mainGrade = document.getElementById('main-grade').value;
+            if (grades.includes(mainGrade)) {
+                gradeSelect.value = mainGrade;
+            }
+
+            onScopeGradeChange();
+        }
+
+        function onScopeGradeChange() {
+            const grade = document.getElementById('scope-select-grade').value;
+            const bookSelect = document.getElementById('scope-select-book');
+            
+            const filtered = rawData.filter(r => r["年級"] === grade);
+            const books = [...new Set(filtered.map(r => r["冊別"]))].filter(Boolean);
+
+            bookSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                books.map(b => `<option value="${b}">${b}</option>`).join('');
+
+            onScopeBookChange();
+        }
+
+        function onScopeBookChange() {
+            const grade = document.getElementById('scope-select-grade').value;
+            const book = document.getElementById('scope-select-book').value;
+            const ltSelect = document.getElementById('scope-select-lesson-topic');
+
+            const filtered = rawData.filter(r => r["年級"] === grade && r["冊別"] === book);
+            const lessonTopics = [...new Set(filtered.map(r => r["lessonTopic"]))].filter(Boolean);
+
+            ltSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                lessonTopics.map(lt => `<option value="${lt}">${lt}</option>`).join('');
+        }
+
+        function addScopeItem() {
+            const grade = document.getElementById('scope-select-grade').value;
+            const book = document.getElementById('scope-select-book').value;
+            const lessonTopic = document.getElementById('scope-select-lesson-topic').value;
+
+            if (!grade || !book || !lessonTopic) {
+                showAlert('請依序完整選擇：年級、冊別、以及課次及課題！');
+                return;
+            }
+
+            const exists = selectedScopeList.some(item => 
+                item.grade === grade && item.book === book && item.lessonTopic === lessonTopic
+            );
+
+            if (exists) {
+                showAlert('該考核範圍項目已在列表中！');
+                return;
+            }
+
+            selectedScopeList.push({ grade, book, lessonTopic });
+            renderScopeTable();
+            renderObjectiveTable();
+        }
+
+        function removeScopeItem(index) {
+            selectedScopeList.splice(index, 1);
+            renderScopeTable();
+            renderObjectiveTable();
+        }
+
+        function sortScopeByExcel() {
+            if (selectedScopeList.length === 0) return;
+
+            selectedScopeList.sort((a, b) => {
+                const idxA = rawData.findIndex(r => r["年級"] === a.grade && r["冊別"] === a.book && r["lessonTopic"] === a.lessonTopic);
+                const idxB = rawData.findIndex(r => r["年級"] === b.grade && r["冊別"] === b.book && r["lessonTopic"] === b.lessonTopic);
+                return idxA - idxB;
+            });
+
+            renderScopeTable();
+        }
+
+        function renderScopeTable() {
+            const tbody = document.getElementById('scope-table-body');
+            if (selectedScopeList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">尚未加入考核範圍項目</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = selectedScopeList.map((item, idx) => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 text-center text-slate-500 font-medium">${idx + 1}</td>
+                    <td class="p-3 font-semibold text-slate-800">${item.grade}</td>
+                    <td class="p-3 text-slate-600">${item.book}</td>
+                    <td class="p-3 font-semibold text-indigo-950">${item.lessonTopic}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="removeScopeItem(${idx})" class="text-rose-500 hover:text-rose-700 transition p-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Objectives Cascading Selectors
+        function populateObjGrades() {
+            const gradeSelect = document.getElementById('obj-select-grade');
+            const grades = [...new Set(rawData.map(r => r["年級"]))].filter(Boolean);
+
+            gradeSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                grades.map(g => `<option value="${g}">${g}</option>`).join('');
+
+            const mainGrade = document.getElementById('main-grade').value;
+            if (grades.includes(mainGrade)) {
+                gradeSelect.value = mainGrade;
+            }
+
+            onObjGradeChange();
+        }
+
+        function onObjGradeChange() {
+            const grade = document.getElementById('obj-select-grade').value;
+            const bookSelect = document.getElementById('obj-select-book');
+
+            const filtered = rawData.filter(r => r["年級"] === grade);
+            const books = [...new Set(filtered.map(r => r["冊別"]))].filter(Boolean);
+
+            bookSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                books.map(b => `<option value="${b}">${b}</option>`).join('');
+
+            onObjBookChange();
+        }
+
+        function onObjBookChange() {
+            const grade = document.getElementById('obj-select-grade').value;
+            const book = document.getElementById('obj-select-book').value;
+            const ltSelect = document.getElementById('obj-select-lesson-topic');
+
+            const filtered = rawData.filter(r => r["年級"] === grade && r["冊別"] === book);
+            const lessonTopics = [...new Set(filtered.map(r => r["lessonTopic"]))].filter(Boolean);
+
+            ltSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                lessonTopics.map(lt => `<option value="${lt}">${lt}</option>`).join('');
+
+            onObjLessonTopicChange();
+        }
+
+        function onObjLessonTopicChange() {
+            const grade = document.getElementById('obj-select-grade').value;
+            const book = document.getElementById('obj-select-book').value;
+            const lessonTopic = document.getElementById('obj-select-lesson-topic').value;
+            const targetSelect = document.getElementById('obj-select-target');
+
+            const filtered = rawData.filter(r => r["年級"] === grade && r["冊別"] === book && r["lessonTopic"] === lessonTopic);
+            const targets = [...new Set(filtered.map(r => r["教學目標"]))].filter(Boolean);
+
+            targetSelect.innerHTML = '<option value="">-- 請選擇 --</option>' + 
+                targets.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
+        function addObjectiveItem() {
+            const grade = document.getElementById('obj-select-grade').value;
+            const book = document.getElementById('obj-select-book').value;
+            const lessonTopic = document.getElementById('obj-select-lesson-topic').value;
+            const target = document.getElementById('obj-select-target').value;
+            const qNum = document.getElementById('obj-input-qnum').value.trim();
+            const qType = document.getElementById('obj-input-type').value;
+            const difficulty = document.getElementById('obj-input-difficulty').value;
+            const score = parseInt(document.getElementById('obj-input-score').value) || 0;
+
+            if (!grade || !book || !lessonTopic || !target) {
+                showAlert('請依序完整選擇：年級、冊別、課次及課題與教學目標！');
+                return;
+            }
+            if (!qNum) {
+                showAlert('請輸入題號！');
+                return;
+            }
+
+            const matchedRow = rawData.find(r => 
+                r["年級"] === grade && 
+                r["冊別"] === book && 
+                r["lessonTopic"] === lessonTopic && 
+                r["教學目標"] === target
+            );
+            const category = matchedRow && matchedRow["範疇"] ? matchedRow["範疇"] : "數";
+
+            const isDuplicate = selectedObjectiveList.some(item => item.qNum.toLowerCase() === qNum.toLowerCase());
+            if (isDuplicate) {
+                showAlert(`題號 「${qNum}」 已存在！請勿重複輸入相同的題號。`, "題號重複警告");
+                return;
+            }
+
+            selectedObjectiveList.push({ qNum, qType, grade, book, lessonTopic, target, category, difficulty, score });
+            renderObjectiveTable();
+
+            document.getElementById('obj-input-qnum').value = '';
+        }
+
+        function removeObjectiveItem(index) {
+            selectedObjectiveList.splice(index, 1);
+            renderObjectiveTable();
+        }
+
+        function sortObjectivesByQNum() {
+            if (selectedObjectiveList.length === 0) return;
+
+            selectedObjectiveList.sort((a, b) => {
+                return a.qNum.localeCompare(b.qNum, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            renderObjectiveTable();
+        }
+
+        function isQuestionInScope(item) {
+            if (selectedScopeList.length === 0) return false;
+            return selectedScopeList.some(scope => 
+                scope.grade === item.grade &&
+                scope.book === item.book &&
+                scope.lessonTopic === item.lessonTopic
+            );
+        }
+
+        function renderObjectiveTable() {
+            const tbody = document.getElementById('obj-table-body');
+            const tfoot = document.getElementById('obj-table-foot');
+            
+            let totalScore = 0;
+            let scoreHigh = 0, scoreMed = 0, scoreLow = 0;
+            let scoreInScope = 0, scorePrior = 0;
+
+            let catStats = {
+                '數': 0,
+                '圖形與空間': 0,
+                '度量': 0,
+                '數據處理': 0,
+                '代數': 0
+            };
+
+            if (selectedObjectiveList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">尚未新增教學目標及題目安排</td></tr>';
+                tfoot.innerHTML = `
+                    <tr class="font-bold text-slate-800">
+                        <td colspan="6" class="p-3 text-right">試卷總分：</td>
+                        <td class="p-3 text-center text-indigo-700 font-bold text-base">0</td>
+                        <td colspan="2"></td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = selectedObjectiveList.map((item, idx) => {
+                totalScore += item.score;
+
+                if (item.difficulty === '高') scoreHigh += item.score;
+                else if (item.difficulty === '中') scoreMed += item.score;
+                else if (item.difficulty === '低') scoreLow += item.score;
+
+                const catKey = item.category || '數';
+                if (catStats[catKey] !== undefined) {
+                    catStats[catKey] += item.score;
+                } else {
+                    catStats[catKey] = item.score;
+                }
+
+                const inScope = isQuestionInScope(item);
+                if (inScope) {
+                    scoreInScope += item.score;
+                } else {
+                    scorePrior += item.score;
+                }
+                
+                let diffBadgeClass = 'bg-slate-100 text-slate-700';
+                if (item.difficulty === '高') diffBadgeClass = 'bg-rose-100 text-rose-800 border border-rose-200';
+                if (item.difficulty === '中') diffBadgeClass = 'bg-amber-100 text-amber-800 border border-amber-200';
+                if (item.difficulty === '低') diffBadgeClass = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+
+                const knowledgeTag = inScope 
+                    ? '<span class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-medium">本次範圍</span>'
+                    : '<span class="text-xs bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded-full font-bold"><i class="fa-solid fa-clock-rotate-left mr-1"></i>已有知識</span>';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 text-center font-bold text-indigo-800">${item.qNum}</td>
+                        <td class="p-3 text-slate-700 font-medium">${item.qType}</td>
+                        <td class="p-3 text-slate-600 text-xs">
+                            <span class="font-semibold text-slate-800 block">${item.book}</span>
+                            <span>${item.lessonTopic}</span>
+                        </td>
+                        <td class="p-3 font-medium text-slate-800">${item.target}</td>
+                        <td class="p-3 text-center font-semibold text-slate-700">${item.category}</td>
+                        <td class="p-3 text-center font-bold">
+                            <span class="text-xs px-2.5 py-1 rounded-md ${diffBadgeClass}">${item.difficulty}</span>
+                        </td>
+                        <td class="p-3 text-center font-bold text-slate-800">${item.score}</td>
+                        <td class="p-3 text-center">${knowledgeTag}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="removeObjectiveItem(${idx})" class="text-rose-500 hover:text-rose-700 transition p-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            const pctHigh = totalScore > 0 ? ((scoreHigh / totalScore) * 100).toFixed(1) : "0.0";
+            const pctMed  = totalScore > 0 ? ((scoreMed  / totalScore) * 100).toFixed(1) : "0.0";
+            const pctLow  = totalScore > 0 ? ((scoreLow  / totalScore) * 100).toFixed(1) : "0.0";
+
+            const pctPrior   = totalScore > 0 ? ((scorePrior / totalScore) * 100).toFixed(1) : "0.0";
+            const pctInScope = totalScore > 0 ? ((scoreInScope / totalScore) * 100).toFixed(1) : "0.0";
+
+            const catPills = Object.keys(catStats).map(cat => {
+                const sc = catStats[cat];
+                const pct = totalScore > 0 ? ((sc / totalScore) * 100).toFixed(1) : "0.0";
+                return `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-800 border border-slate-300 font-medium text-xs">
+                        <span class="font-bold text-indigo-900">${cat}</span>: ${sc} 分 (${pct}%)
+                    </span>
+                `;
+            }).join('');
+
+            tfoot.innerHTML = `
+                <tr class="font-bold border-t border-slate-200 bg-slate-100">
+                    <td colspan="6" class="p-3 text-right text-slate-800">試卷總分：</td>
+                    <td class="p-3 text-center text-indigo-700 font-extrabold text-base">${totalScore}</td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr class="bg-slate-50 text-xs">
+                    <td colspan="9" class="p-3">
+                        <div class="flex flex-col gap-2">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-chart-pie text-indigo-600"></i> 
+                                    <span>全卷難度比重統計：</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 text-rose-800 border border-rose-200 font-medium">
+                                        高難度: <strong class="font-bold text-rose-950">${scoreHigh} 分</strong> (${pctHigh}%)
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-medium">
+                                        中難度: <strong class="font-bold text-amber-950">${scoreMed} 分</strong> (${pctMed}%)
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">
+                                        低難度: <strong class="font-bold text-emerald-950">${scoreLow} 分</strong> (${pctLow}%)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="bg-indigo-50/40 text-xs">
+                    <td colspan="9" class="p-3">
+                        <div class="flex flex-col gap-2">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-shapes text-indigo-600"></i> 
+                                    <span>範疇分佈與佔分比重統計：</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    ${catPills}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="bg-purple-50/50 text-xs border-t border-purple-100">
+                    <td colspan="9" class="p-3">
+                        <div class="flex flex-col gap-2">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                <div class="font-bold text-purple-900 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-clock-rotate-left text-purple-600"></i> 
+                                    <span>範圍屬性與已有知識佔分比重統計：</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-100 text-purple-900 border border-purple-200 font-medium">
+                                        已有知識: <strong class="font-bold text-purple-950">${scorePrior} 分</strong> (${pctPrior}%)
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200 font-medium">
+                                        本次範圍: <strong class="font-bold text-indigo-950">${scoreInScope} 分</strong> (${pctInScope}%)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function exportToWord() {
+            const schoolName = document.getElementById('school-name').value || "東華三院高可寧紀念小學";
+            const mainGrade = document.getElementById('main-grade').value || "未指定";
+            const examStage = document.getElementById('exam-stage').value || "未指定";
+
+            let totalScore = 0;
+            let diffStats = { '高': 0, '中': 0, '低': 0 };
+            let catStats = { '數': 0, '圖形與空間': 0, '度量': 0, '數據處理': 0, '代數': 0 };
+            let knowledgeStats = { 'inScopeCount': 0, 'inScopeScore': 0, 'priorCount': 0, 'priorScore': 0 };
+
+            // Scope Table Rows HTML
+            let scopeRows = selectedScopeList.map((item, idx) => `
+                <tr>
+                    <td style="border:1px solid #000; padding:6px; text-align:center;">${idx + 1}</td>
+                    <td style="border:1px solid #000; padding:6px;">${item.grade}</td>
+                    <td style="border:1px solid #000; padding:6px;">${item.book}</td>
+                    <td style="border:1px solid #000; padding:6px; font-weight:bold;">${item.lessonTopic}</td>
+                </tr>
+            `).join('');
+
+            if (selectedScopeList.length === 0) {
+                scopeRows = `<tr><td colspan="4" style="border:1px solid #000; padding:6px; text-align:center;">（尚未設定考核範圍）</td></tr>`;
+            }
+
+            // Objective Table Rows HTML
+            let objRows = selectedObjectiveList.map(item => {
+                totalScore += item.score;
+                if (diffStats[item.difficulty] !== undefined) diffStats[item.difficulty] += item.score;
+                
+                const catKey = item.category || '數';
+                if (catStats[catKey] !== undefined) catStats[catKey] += item.score;
+                else catStats[catKey] = item.score;
+
+                const inScope = isQuestionInScope(item);
+                if (inScope) {
+                    knowledgeStats.inScopeCount += 1;
+                    knowledgeStats.inScopeScore += item.score;
+                } else {
+                    knowledgeStats.priorCount += 1;
+                    knowledgeStats.priorScore += item.score;
+                }
+
+                const remark = inScope ? '本次範圍' : '已有知識';
+
+                return `
+                    <tr>
+                        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">${item.qNum}</td>
+                        <td style="border:1px solid #000; padding:6px;">${item.qType}</td>
+                        <td style="border:1px solid #000; padding:6px;">${item.book} ${item.lessonTopic}</td>
+                        <td style="border:1px solid #000; padding:6px;">${item.target}</td>
+                        <td style="border:1px solid #000; padding:6px; text-align:center;">${item.category}</td>
+                        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">${item.difficulty}</td>
+                        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">${item.score}</td>
+                        <td style="border:1px solid #000; padding:6px; text-align:center; ${!inScope ? 'background-color:#f3e8ff; font-weight:bold;' : ''}">${remark}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (selectedObjectiveList.length === 0) {
+                objRows = `<tr><td colspan="8" style="border:1px solid #000; padding:6px; text-align:center;">（尚未新增題目目標）</td></tr>`;
+            }
+
+            const scoreRatio = (sc) => totalScore > 0 ? ((sc / totalScore) * 100).toFixed(1) : "0.0";
+
+            let diffSummaryHTML = `
+                <li>高難度：${diffStats['高']} 分 (${scoreRatio(diffStats['高'])}%)</li>
+                <li>中難度：${diffStats['中']} 分 (${scoreRatio(diffStats['中'])}%)</li>
+                <li>低難度：${diffStats['低']} 分 (${scoreRatio(diffStats['低'])}%)</li>
+            `;
+
+            let catSummaryHTML = Object.keys(catStats).map(cat => `
+                <li>${cat}：${catStats[cat]} 分 (${scoreRatio(catStats[cat])}%)</li>
+            `).join('');
+
+            let knowledgeSummaryHTML = `
+                <li>已有知識：<strong>${knowledgeStats.priorScore} 分 (${scoreRatio(knowledgeStats.priorScore)}%)</strong> [${knowledgeStats.priorCount} 題]</li>
+                <li>本次範圍：<strong>${knowledgeStats.inScopeScore} 分 (${scoreRatio(knowledgeStats.inScopeScore)}%)</strong> [${knowledgeStats.inScopeCount} 題]</li>
+            `;
+
+            // Build full Word HTML file
+            const wordContent = `
+                <html xmlns:o='urn:schemas-microsoft-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${schoolName} 數學科 擬題紀錄表</title>
+                    <style>
+                        body { font-family: Microsoft JhengHei, PMingLiU, sans-serif; font-size: 11pt; line-height: 1.5; }
+                        h1 { font-size: 18pt; text-align: center; margin-bottom: 2px; }
+                        h2 { font-size: 15pt; text-align: center; margin-top: 0; margin-bottom: 12px; }
+                        .info-bar { text-align: center; font-size: 11pt; margin-bottom: 20px; }
+                        .section-title { font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 8px; background-color: #f1f5f9; padding: 4px; border-left: 5px solid #3730a3; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 10.5pt; }
+                        th { background-color: #f1f5f9; border: 1px solid #000; padding: 6px; text-align: left; }
+                        ul { margin: 4px 0; padding-left: 20px; }
+                        .summary-box { border: 1px solid #000; padding: 10px; font-size: 10.5pt; margin-bottom: 20px; }
+                        .signature-box { margin-top: 40px; font-size: 11pt; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${schoolName}</h1>
+                    <h2>數學科 擬題紀錄表</h2>
+                    
+                    <div class="info-bar">
+                        <b>年級：</b>${mainGrade} &nbsp;&nbsp;&nbsp;&nbsp;
+                        <b>考試階段：</b>${examStage} &nbsp;&nbsp;&nbsp;&nbsp;
+                        <b>總分：</b>${totalScore} 分 &nbsp;&nbsp;&nbsp;&nbsp;
+                        <b>總題數：</b>${selectedObjectiveList.length} 題
+                    </div>
+
+                    <div class="section-title">一、 本次考核範圍</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:40px; text-align:center;">#</th>
+                                <th style="width:80px;">年級</th>
+                                <th style="width:80px;">冊別</th>
+                                <th>課次及課題</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${scopeRows}
+                        </tbody>
+                    </table>
+
+                    <div class="section-title">二、 題目與教學目標分佈</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:45px; text-align:center;">題號</th>
+                                <th style="width:70px;">題型</th>
+                                <th>課題內容</th>
+                                <th>對應教學目標</th>
+                                <th style="width:70px; text-align:center;">範疇</th>
+                                <th style="width:45px; text-align:center;">難度</th>
+                                <th style="width:45px; text-align:center;">佔分</th>
+                                <th style="width:75px; text-align:center;">備註</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${objRows}
+                        </tbody>
+                    </table>
+
+                    <div class="section-title">三、 試卷難度、範疇與屬性統計</div>
+                    <table class="summary-box">
+                        <tr>
+                            <td style="vertical-align:top; width:33%; border-right:1px solid #ccc; padding-right:10px;">
+                                <b>【難度比重】</b>
+                                <ul>${diffSummaryHTML}</ul>
+                            </td>
+                            <td style="vertical-align:top; width:33%; border-right:1px solid #ccc; padding-left:10px; padding-right:10px;">
+                                <b>【範疇比重】</b>
+                                <ul>${catSummaryHTML}</ul>
+                            </td>
+                            <td style="vertical-align:top; width:33%; padding-left:10px;">
+                                <b>【範圍屬性】</b>
+                                <ul>${knowledgeSummaryHTML}</ul>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <table class="signature-box" style="border:none;">
+                        <tr>
+                            <td style="border:none;">擬題教師簽署：______________________</td>
+                            <td style="border:none;">科 Panel 簽署：______________________</td>
+                            <td style="border:none;">日期：______________________</td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${schoolName}_數學科擬題紀錄表_${mainGrade}_${examStage}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function generateAndPrintReport() {
+            const schoolName = document.getElementById('school-name').value || "東華三院高可寧紀念小學";
+            const mainGrade = document.getElementById('main-grade').value || "未指定";
+            const examStage = document.getElementById('exam-stage').value || "未指定";
+
+            document.getElementById('print-header-school').textContent = schoolName;
+            document.getElementById('print-grade').textContent = mainGrade;
+            document.getElementById('print-exam-stage').textContent = examStage;
+
+            // Section 1 Scope
+            const scopeTbody = document.getElementById('print-scope-tbody');
+            if (selectedScopeList.length === 0) {
+                scopeTbody.innerHTML = '<tr><td colspan="4" class="p-2 text-center text-slate-400">（尚未設定考核範圍）</td></tr>';
+            } else {
+                scopeTbody.innerHTML = selectedScopeList.map((item, idx) => `
+                    <tr class="border-b border-slate-200">
+                        <td class="border border-slate-300 p-2 text-center font-medium">${idx + 1}</td>
+                        <td class="border border-slate-300 p-2">${item.grade}</td>
+                        <td class="border border-slate-300 p-2">${item.book}</td>
+                        <td class="border border-slate-300 p-2 font-semibold">${item.lessonTopic}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Section 2 Objectives & Stats
+            const objTbody = document.getElementById('print-obj-tbody');
+            let totalScore = 0;
+            let diffStats = { '高': 0, '中': 0, '低': 0 };
+            let catStats = { '數': 0, '圖形與空間': 0, '度量': 0, '數據處理': 0, '代數': 0 };
+            let knowledgeStats = { 'inScopeCount': 0, 'inScopeScore': 0, 'priorCount': 0, 'priorScore': 0 };
+
+            if (selectedObjectiveList.length === 0) {
+                objTbody.innerHTML = '<tr><td colspan="8" class="p-2 text-center text-slate-400">（尚未新增題目目標）</td></tr>';
+            } else {
+                objTbody.innerHTML = selectedObjectiveList.map(item => {
+                    totalScore += item.score;
+                    if (diffStats[item.difficulty] !== undefined) diffStats[item.difficulty] += item.score;
+                    
+                    const catKey = item.category || '數';
+                    if (catStats[catKey] !== undefined) catStats[catKey] += item.score;
+                    else catStats[catKey] = item.score;
+
+                    const inScope = isQuestionInScope(item);
+                    if (inScope) {
+                        knowledgeStats.inScopeCount += 1;
+                        knowledgeStats.inScopeScore += item.score;
+                    } else {
+                        knowledgeStats.priorCount += 1;
+                        knowledgeStats.priorScore += item.score;
+                    }
+
+                    const remark = inScope ? '本次範圍' : '已有知識';
+
+                    return `
+                        <tr class="border-b border-slate-200">
+                            <td class="border border-slate-300 p-2 text-center font-bold">${item.qNum}</td>
+                            <td class="border border-slate-300 p-2">${item.qType}</td>
+                            <td class="border border-slate-300 p-2">${item.book} ${item.lessonTopic}</td>
+                            <td class="border border-slate-300 p-2">${item.target}</td>
+                            <td class="border border-slate-300 p-2 text-center font-medium">${item.category}</td>
+                            <td class="border border-slate-300 p-2 text-center font-semibold">${item.difficulty}</td>
+                            <td class="border border-slate-300 p-2 text-center font-bold">${item.score}</td>
+                            <td class="border border-slate-300 p-2 text-center font-medium ${!inScope ? 'font-bold text-purple-900 bg-purple-50' : ''}">${remark}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('print-total-score').textContent = totalScore;
+            document.getElementById('print-total-questions').textContent = selectedObjectiveList.length;
+
+            const scoreRatio = (sc) => totalScore > 0 ? ((sc / totalScore) * 100).toFixed(1) : "0.0";
+
+            // Print Diff Summary
+            document.getElementById('print-difficulty-summary').innerHTML = `
+                <li>高難度：${diffStats['高']} 分 (${scoreRatio(diffStats['高'])}%)</li>
+                <li>中難度：${diffStats['中']} 分 (${scoreRatio(diffStats['中'])}%)</li>
+                <li>低難度：${diffStats['低']} 分 (${scoreRatio(diffStats['低'])}%)</li>
+            `;
+
+            // Print Category Summary
+            document.getElementById('print-category-summary').innerHTML = Object.keys(catStats).map(cat => `
+                <li>${cat}：${catStats[cat]} 分 (${scoreRatio(catStats[cat])}%)</li>
+            `).join('');
+
+            // Print Knowledge Summary
+            document.getElementById('print-knowledge-summary').innerHTML = `
+                <li>已有知識：<strong>${knowledgeStats.priorScore} 分 (${scoreRatio(knowledgeStats.priorScore)}%)</strong> [${knowledgeStats.priorCount} 題]</li>
+                <li>本次範圍：<strong>${knowledgeStats.inScopeScore} 分 (${scoreRatio(knowledgeStats.inScopeScore)}%)</strong> [${knowledgeStats.inScopeCount} 題]</li>
+            `;
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
